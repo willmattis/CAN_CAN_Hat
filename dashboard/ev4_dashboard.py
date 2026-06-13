@@ -581,6 +581,7 @@ class Dashboard(tk.Tk):
 
         self.values = {}          # signal_name -> latest value
         self.msg_last_rx = {}     # message_name -> timestamp
+        self.msg_period = {}      # message_name -> averaged inter-frame period (s)
         self.frame_count = 0
         self.unknown_count = 0
         self._fps_window = []     # timestamps for frames/sec
@@ -589,6 +590,7 @@ class Dashboard(tk.Tk):
         self.value_labels = {}    # signal_name -> tk Label
         self.key_labels = {}      # signal_name -> tk Label
         self.panel_titles = {}    # message_name -> LabelFrame
+        self._panel_base_text = {}  # message_name -> title text without the rate
 
         # CSV logging.  Column order = qualified signals grouped by message.
         self.log_signals = [qualify(prefix, s.name)
@@ -606,6 +608,7 @@ class Dashboard(tk.Tk):
         self.after(250, self._reflow_all)   # re-flow panels to the maximized width
 
         self.after(100, self._poll)
+        self.after(1000, self._update_rates)
 
     def _maximize(self):
         """Open at full-screen size. Resizing/maximizing *after* the UI is
@@ -1134,11 +1137,13 @@ class Dashboard(tk.Tk):
         for prefix, msg in msgs:
             tag = f"{prefix}  " if prefix else ""
             color = self.SRC_COLOR.get(prefix, CYAN)
-            frame = tk.LabelFrame(parent,
-                                  text=f"  {tag}{msg.name}  (0x{msg.frame_id:X})  ",
+            base_text = f"  {tag}{msg.name}  (0x{msg.frame_id:X})  "
+            frame = tk.LabelFrame(parent, text=base_text,
                                   bg=PANEL, fg=color, bd=1, relief=tk.SOLID,
                                   font=("Segoe UI", 10, "bold"), labelanchor="nw")
-            self.panel_titles[panel_key(prefix, msg)] = (frame, color)
+            key = panel_key(prefix, msg)
+            self.panel_titles[key] = (frame, color)
+            self._panel_base_text[key] = base_text
             frames.append(frame)
 
             for r, sig in enumerate(msg.signals):
@@ -1857,6 +1862,12 @@ class Dashboard(tk.Tk):
                 self._load_window.append((now, item[3] if len(item) > 3 else 0, bus))
                 continue
             _, msg_name, decoded, bits, bus = item
+            prev = self.msg_last_rx.get(msg_name)
+            if prev is not None:
+                dt = now - prev
+                if 0 < dt < 5:            # ignore gaps from reconnects/pauses
+                    p = self.msg_period.get(msg_name)
+                    self.msg_period[msg_name] = dt if p is None else 0.85 * p + 0.15 * dt
             self.msg_last_rx[msg_name] = now
             self.frame_count += 1
             self._fps_window.append(now)
@@ -2057,12 +2068,43 @@ class Dashboard(tk.Tk):
     def _mark_stale(self, now):
         for name, (frame, base_color) in self.panel_titles.items():
             last = self.msg_last_rx.get(name)
+            # "stale" is relative to the message's own rate, so a normally-slow
+            # message (e.g. 0.5 Hz) doesn't keep flashing yellow — it only goes
+            # yellow after missing ~3 expected frames (min 1 s).
+            period = self.msg_period.get(name)
+            stale_after = max(STALE_AFTER, 3 * period) if period else STALE_AFTER
             if last is None:
                 frame.config(fg=GREY)               # never seen
-            elif now - last > STALE_AFTER:
-                frame.config(fg=YELLOW)             # data going stale
+            elif now - last > stale_after:
+                frame.config(fg=YELLOW)             # data actually stalled
             else:
                 frame.config(fg=base_color)         # live (source color)
+
+    @staticmethod
+    def _fmt_rate(period):
+        """Compact 'how often' string from an averaged period (s)."""
+        if not period or period <= 0:
+            return ""
+        hz = 1.0 / period
+        if hz >= 100:
+            return f"{hz:.0f} Hz"
+        if hz >= 1:
+            return f"{hz:.0f} Hz ({period * 1000:.0f} ms)"
+        return f"{hz:.2f} Hz ({period * 1000:.0f} ms)"
+
+    def _update_rates(self):
+        """Refresh the averaged send-rate shown in each panel title (~1 Hz)."""
+        now = time.time()
+        for name, (frame, _color) in self.panel_titles.items():
+            last = self.msg_last_rx.get(name)
+            period = self.msg_period.get(name)
+            if last is None or period is None or now - last > max(STALE_AFTER, 3 * period):
+                rate = ""                            # not live -> no rate
+            else:
+                rate = self._fmt_rate(period)
+            base = self._panel_base_text.get(name, "")
+            frame.config(text=base + ("  " + rate if rate else ""))
+        self.after(1000, self._update_rates)
 
     def on_close(self):
         if getattr(self, "tx_active", False):
