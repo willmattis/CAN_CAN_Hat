@@ -61,13 +61,16 @@ STALE_AFTER = 1.0          # seconds without a frame -> message marked stale
 # DBC sources, decoded together.  Each (filename, prefix); the prefix keeps
 # signals/messages unique when two buses reuse the same names (the two
 # inverters share every message + signal name, only their CAN IDs differ).
-# Frame IDs must not collide across files (they don't for EV4).
-# (filename, prefix, bus). Bus 0 = board 1 (Vehicle + INV2 + IMD);
-# bus 1 = board 2 (Inverter 1, isolated onto its own CAN bus).
+# Frame IDs do NOT collide across files (vehicle 0x02-0x07 + IMD 0x18FF01F4,
+# INV1 0xA0-0xC1, INV2 0xD0-0xF1), so a known id is decoded on whichever bus it
+# arrives -- the ECU echoes vehicle/IMD frames onto BOTH CAN buses.
+# (filename, prefix, bus). The bus here is each source's PRIMARY/transmit bus:
+#   bus 0 = can0: Vehicle/ECU + Inverter 1 (0xA0/0xC0)
+#   bus 1 = can1: Inverter 2 (0xD0/0xF0), isolated (ECU also echoes vehicle here)
 DBC_SOURCES = [
-    ("EV4_Vehicle_Bus.dbc", "",     0),   # main vehicle bus -> no prefix
-    ("Inverter_1.dbc",      "INV1", 1),   # moved to its own bus (board 2)
-    ("Inverter_2.dbc",      "INV2", 0),
+    ("EV4_Vehicle_Bus.dbc", "",     0),   # vehicle/ECU bus -> no prefix
+    ("Inverter_1.dbc",      "INV1", 0),   # Inverter 1 shares the vehicle bus (can0)
+    ("Inverter_2.dbc",      "INV2", 1),   # Inverter 2 on the isolated bus (can1)
 ]
 
 # Friendly bus names by prefix (used for tab labels and the lookup table).
@@ -237,6 +240,12 @@ class CanReader(threading.Thread):
         self.channels = channels          # [(bus_index, ifname), ...]
         self.bitrate = bitrate
         self.frame_map = frame_map
+        # Bus-agnostic index: every frame id is unique across the DBCs, and the
+        # ECU echoes vehicle/IMD frames onto both buses, so if (bus, id) misses
+        # we still decode a known id seen on the "wrong" bus.
+        self.frame_by_id = {}
+        for (_b, fid), info in frame_map.items():
+            self.frame_by_id.setdefault(fid, info)
         self.out_queue = out_queue
         self.status_queue = status_queue
         self._stop = threading.Event()
@@ -358,6 +367,8 @@ class CanReader(threading.Thread):
         bits = can_frame_bits(len(data), msg.is_extended_id)   # bus-load estimate
 
         info = self.frame_map.get((bus, frame_id))
+        if info is None:
+            info = self.frame_by_id.get(frame_id)   # known id on the other bus
         if info is None:
             self.out_queue.put(("unknown", frame_id, None, bits, bus))
             return
