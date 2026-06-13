@@ -1,0 +1,11 @@
+# Python virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logged telemetry
+dashboard/logs/
+
+# Saved watch groups (user-specific)
+dashboard/watch_groups.json
