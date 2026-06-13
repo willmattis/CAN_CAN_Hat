@@ -57,6 +57,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CHANNELS = ["can0", "can1"]   # SocketCAN interfaces for the two HATs
 DEFAULT_BITRATE = 500000              # vehicle/inverter bus bit rate
 STALE_AFTER = 1.0          # seconds without a frame -> message marked stale
+PANEL_MIN_W = 320          # min px per message panel; tab columns = width // this
+                           # (gives 3 cols at the 1280 windowed default, more wide)
 
 # DBC sources, decoded together.  Each (filename, prefix); the prefix keeps
 # signals/messages unique when two buses reuse the same names (the two
@@ -561,6 +563,7 @@ class Dashboard(tk.Tk):
         self.geometry("1280x820")
         self._build_ui()
         self._maximize()
+        self.after(250, self._reflow_all)   # re-flow panels to the maximized width
 
         self.after(100, self._poll)
 
@@ -665,6 +668,7 @@ class Dashboard(tk.Tk):
         nb.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 8))
         self.nb = nb
 
+        self._panel_pages = []   # message-panel pages that re-flow on resize
         for prefix, _db, _bus in self.sources:
             msgs = [(p, m) for (p, m) in self.ordered_msgs if p == prefix]
             page = tk.Frame(nb, bg=BG)
@@ -672,8 +676,8 @@ class Dashboard(tk.Tk):
             tk.Label(page, text="Right-click any signal to add it to the Watch panel "
                      "or open a chart.", bg=BG, fg=GREY,
                      font=("Segoe UI", 8)).pack(side=tk.TOP, anchor="w", padx=12, pady=(4, 0))
-            inner = self._make_scrollable(page)
-            self._build_message_panels(inner, msgs)
+            inner, canvas = self._make_scrollable(page, fill_width=True)
+            self._build_message_panels(inner, msgs, canvas)
 
         self._build_lookup_tab(nb)
         if self.inverters:
@@ -681,15 +685,20 @@ class Dashboard(tk.Tk):
 
         self._build_watch_panel(body)
 
-    def _make_scrollable(self, parent):
-        """Create a vertically-scrollable frame inside parent; return the inner
-        frame to populate.  Mouse wheel works while the pointer is over it."""
+    def _make_scrollable(self, parent, fill_width=False):
+        """Create a vertically-scrollable frame inside parent; return
+        (inner_frame, canvas).  With fill_width the inner frame tracks the
+        canvas width so its columns spread to fill (no empty right margin).
+        Mouse wheel works while the pointer is over it."""
         canvas = tk.Canvas(parent, bg=BG, highlightthickness=0)
         vsb = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
         inner = tk.Frame(canvas, bg=BG)
         inner.bind("<Configure>",
                    lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=inner, anchor="nw")
+        win_id = canvas.create_window((0, 0), window=inner, anchor="nw")
+        if fill_width:
+            canvas.bind("<Configure>",
+                        lambda e: canvas.itemconfig(win_id, width=e.width))
         canvas.configure(yscrollcommand=vsb.set)
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
@@ -697,7 +706,7 @@ class Dashboard(tk.Tk):
         canvas.bind("<Enter>", lambda e: canvas.bind_all(
             "<MouseWheel>", lambda ev: canvas.yview_scroll(int(-ev.delta / 120), "units")))
         canvas.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
-        return inner
+        return inner, canvas
 
     # ---- Watch panel (pinned signals, docked right) ---------------------
     def _build_watch_panel(self, parent):
@@ -1080,18 +1089,17 @@ class Dashboard(tk.Tk):
     # Color the panel border by source so the buses are easy to tell apart.
     SRC_COLOR = {"": CYAN, "INV1": "#7ee081", "INV2": "#e0c97e"}
 
-    def _build_message_panels(self, parent, msgs):
-        ncols = 3
-        for i, (prefix, msg) in enumerate(msgs):
+    def _build_message_panels(self, parent, msgs, canvas):
+        frames = []
+        for prefix, msg in msgs:
             tag = f"{prefix}  " if prefix else ""
             color = self.SRC_COLOR.get(prefix, CYAN)
             frame = tk.LabelFrame(parent,
                                   text=f"  {tag}{msg.name}  (0x{msg.frame_id:X})  ",
                                   bg=PANEL, fg=color, bd=1, relief=tk.SOLID,
                                   font=("Segoe UI", 10, "bold"), labelanchor="nw")
-            frame.grid(row=i // ncols, column=i % ncols, padx=6, pady=6, sticky="nsew")
-            parent.grid_columnconfigure(i % ncols, weight=1)
             self.panel_titles[panel_key(prefix, msg)] = (frame, color)
+            frames.append(frame)
 
             for r, sig in enumerate(msg.signals):
                 key = qualify(prefix, sig.name)
@@ -1103,10 +1111,41 @@ class Dashboard(tk.Tk):
                                fg=FG, anchor="e", font=("Consolas", 9, "bold"),
                                width=12, cursor="hand2")
                 val.grid(row=r, column=1, sticky="e", padx=(6, 8), pady=1)
+                frame.grid_columnconfigure(0, weight=1)   # name col absorbs slack
                 self.value_labels[key] = (val, u)
                 # right-click a signal anywhere in the panels -> add to Watch / chart
                 for w in (namelbl, val):
                     w.bind("<Button-3>", lambda e, k=key: self._signal_context(e, k))
+
+        # Lay the panels out in a column grid whose column count follows the
+        # window width (3 at the windowed default, more in fullscreen), so wide
+        # screens don't leave a big empty margin. Re-flows on resize.
+        record = {"canvas": canvas, "inner": parent, "frames": frames, "ncols": 0}
+        self._panel_pages.append(record)
+        canvas.bind("<Configure>", lambda e, rec=record: self._reflow_page(rec), add="+")
+        self._reflow_page(record)
+
+    def _reflow_page(self, record):
+        """Re-grid a page's message panels into width // PANEL_MIN_W columns.
+        Cheap no-op when the column count hasn't changed."""
+        w = record["canvas"].winfo_width()
+        if w <= 1:
+            return                              # not realized yet
+        ncols = max(1, min(8, w // PANEL_MIN_W))
+        if ncols == record["ncols"]:
+            return
+        record["ncols"] = ncols
+        inner = record["inner"]
+        for i, frame in enumerate(record["frames"]):
+            frame.grid(row=i // ncols, column=i % ncols, padx=6, pady=6, sticky="nsew")
+        for c in range(8):
+            inner.grid_columnconfigure(c, weight=1 if c < ncols else 0)
+
+    def _reflow_all(self):
+        self.update_idletasks()
+        for rec in self._panel_pages:
+            rec["ncols"] = 0          # force a re-grid at the realized width
+            self._reflow_page(rec)
 
     # ---- lookup / search tab --------------------------------------------
     def _build_lookup_tab(self, nb):
@@ -1128,7 +1167,7 @@ class Dashboard(tk.Tk):
         self.search_count = tk.Label(top, text="", bg=BG, fg=GREY, font=("Segoe UI", 10))
         self.search_count.pack(side=tk.LEFT, padx=14)
 
-        inner = self._make_scrollable(page)
+        inner, _ = self._make_scrollable(page)
         self.lookup_results = tk.Frame(inner, bg=BG)
         self.lookup_results.pack(fill=tk.BOTH, expand=True)
         self._do_search()
@@ -1195,7 +1234,7 @@ class Dashboard(tk.Tk):
         page = tk.Frame(nb, bg=BG)
         nb.add(page, text="⚙ Control")
         self.control_page = page
-        outer = self._make_scrollable(page)
+        outer, _ = self._make_scrollable(page)
 
         # Safety banner
         warn = tk.Frame(outer, bg="#3a0d0d")
