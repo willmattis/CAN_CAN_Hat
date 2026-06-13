@@ -1925,7 +1925,15 @@ class Dashboard(tk.Tk):
                 if key in self._watch_param_cache:
                     lbl.config(text=self._fmt(self._watch_param_cache[key], unit))
             elif key in self.values:
-                lbl.config(text=self._fmt(self.values[key], unit))
+                value = self.values[key]
+                lbl.config(text=self._fmt(value, unit))
+                # match the bus/lookup tabs: fault signals red when set, green clear
+                if is_fault_signal(key):
+                    try:
+                        active = float(value) != 0
+                    except (TypeError, ValueError):
+                        active = bool(value)
+                    lbl.config(fg=ACCENT if active else GREEN)
 
         # live calibration readouts on the Control tab (selected inverter)
         cal = getattr(self, "cal_labels", None)
