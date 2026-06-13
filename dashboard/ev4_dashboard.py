@@ -1157,34 +1157,41 @@ class Dashboard(tk.Tk):
                 for w in (namelbl, val):
                     w.bind("<Button-3>", lambda e, k=key: self._signal_context(e, k))
 
-        # Lay the panels out in a column grid whose column count follows the
-        # window width (3 at the windowed default, more in fullscreen), so wide
-        # screens don't leave a big empty margin. Re-flows on resize.
-        record = {"canvas": canvas, "inner": parent, "frames": frames, "ncols": 0}
+        # Masonry layout: column count follows the window width (3 at the
+        # windowed default, more in fullscreen) and each panel keeps its own
+        # height, dropping into the shortest column — so a tall panel (e.g.
+        # MC_FAULTS) doesn't stretch its neighbours. Re-flows on resize.
+        record = {"canvas": canvas, "inner": parent, "frames": frames,
+                  "ncols": 0, "w": 0}
         self._panel_pages.append(record)
         canvas.bind("<Configure>", lambda e, rec=record: self._reflow_page(rec), add="+")
         self._reflow_page(record)
 
     def _reflow_page(self, record):
-        """Re-grid a page's message panels into width // PANEL_MIN_W columns.
-        Cheap no-op when the column count hasn't changed."""
-        w = record["canvas"].winfo_width()
+        """Place a page's message panels in masonry columns (width //
+        PANEL_MIN_W of them). No-op when neither width nor column count changed."""
+        canvas = record["canvas"]
+        w = canvas.winfo_width()
         if w <= 1:
             return                              # not realized yet
         ncols = max(1, min(8, w // PANEL_MIN_W))
-        if ncols == record["ncols"]:
+        if w == record["w"] and ncols == record["ncols"]:
             return
-        record["ncols"] = ncols
+        record["w"], record["ncols"] = w, ncols
         inner = record["inner"]
-        for i, frame in enumerate(record["frames"]):
-            frame.grid(row=i // ncols, column=i % ncols, padx=6, pady=6, sticky="nsew")
-        for c in range(8):
-            inner.grid_columnconfigure(c, weight=1 if c < ncols else 0)
+        inner.update_idletasks()                # so reqheight() is accurate
+        pad, col_w = 6, w // ncols
+        col_h = [pad] * ncols                   # running height of each column
+        for frame in record["frames"]:
+            c = min(range(ncols), key=lambda i: col_h[i])   # shortest column
+            frame.place(x=c * col_w + pad, y=col_h[c], width=col_w - 2 * pad)
+            col_h[c] += frame.winfo_reqheight() + pad
+        inner.configure(height=max(col_h) + pad)   # so the canvas scrolls right
 
     def _reflow_all(self):
         self.update_idletasks()
         for rec in self._panel_pages:
-            rec["ncols"] = 0          # force a re-grid at the realized width
+            rec["w"] = 0              # force a re-layout at the realized width
             self._reflow_page(rec)
 
     # ---- lookup / search tab --------------------------------------------
