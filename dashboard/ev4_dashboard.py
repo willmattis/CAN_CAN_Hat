@@ -59,6 +59,8 @@ DEFAULT_BITRATE = 500000              # vehicle/inverter bus bit rate
 STALE_AFTER = 1.0          # seconds without a frame -> message marked stale
 PANEL_MIN_W = 320          # min px per message panel; tab columns = width // this
                            # (gives 3 cols at the 1280 windowed default, more wide)
+WIDE_PANEL_SIGNALS = 40    # panels with >= this many signals use 2 internal
+                           # columns and span 2 layout columns (e.g. MC_FAULTS)
 
 # DBC sources, decoded together.  Each (filename, prefix); the prefix keeps
 # signals/messages unique when two buses reuse the same names (the two
@@ -213,6 +215,25 @@ def decode_faults(table, lo, hi):
     bits = (int(hi or 0) << 16) | int(lo or 0)
     names = [name for bit, name in table.items() if bits & (1 << bit)]
     return bits, names
+
+
+def decode_fault_word(sig_name, value):
+    """Active fault names for ONE inverter fault word, chosen by signal name
+    (e.g. 'INV_Run_Fault_Hi'). Returns [] if no bits set, None if not a fault
+    word."""
+    if "Post_Fault" in sig_name:
+        table = POST_FAULTS
+    elif "Run_Fault" in sig_name:
+        table = RUN_FAULTS
+    else:
+        return None
+    try:
+        v = int(value)
+    except (TypeError, ValueError):
+        return []
+    base = 16 if sig_name.endswith("_Hi") else 0      # Hi word = bits 16-31
+    return [n for bit, n in table.items()
+            if base <= bit <= base + 15 and (v >> (bit - base)) & 1]
 
 
 def _clamp_s16(v):
@@ -591,6 +612,7 @@ class Dashboard(tk.Tk):
         self.key_labels = {}      # signal_name -> tk Label
         self.panel_titles = {}    # message_name -> LabelFrame
         self._panel_base_text = {}  # message_name -> title text without the rate
+        self._faultword_keys = set()  # signals decoded inline to fault names
 
         # CSV logging.  Column order = qualified signals grouped by message.
         self.log_signals = [qualify(prefix, s.name)
@@ -1133,7 +1155,7 @@ class Dashboard(tk.Tk):
     SRC_COLOR = {"": CYAN, "INV1": "#7ee081", "INV2": "#e0c97e"}
 
     def _build_message_panels(self, parent, msgs, canvas):
-        frames = []
+        frames, spans = [], []
         for prefix, msg in msgs:
             tag = f"{prefix}  " if prefix else ""
             color = self.SRC_COLOR.get(prefix, CYAN)
@@ -1141,40 +1163,59 @@ class Dashboard(tk.Tk):
             frame = tk.LabelFrame(parent, text=base_text,
                                   bg=PANEL, fg=color, bd=1, relief=tk.SOLID,
                                   font=("Segoe UI", 10, "bold"), labelanchor="nw")
-            key = panel_key(prefix, msg)
-            self.panel_titles[key] = (frame, color)
-            self._panel_base_text[key] = base_text
-            frames.append(frame)
+            pkey = panel_key(prefix, msg)
+            self.panel_titles[pkey] = (frame, color)
+            self._panel_base_text[pkey] = base_text
 
-            for r, sig in enumerate(msg.signals):
+            # Big panels (e.g. MC_FAULTS) use TWO internal signal columns so they
+            # aren't very tall; such a panel spans two layout columns.
+            nsig = len(msg.signals)
+            two_col = nsig >= WIDE_PANEL_SIGNALS
+            per_col = (nsig + 1) // 2 if two_col else nsig
+            frame.grid_columnconfigure(0, weight=1)
+            if two_col:
+                frame.grid_columnconfigure(2, weight=1)
+
+            for i, sig in enumerate(msg.signals):
                 key = qualify(prefix, sig.name)
+                block = 1 if (two_col and i >= per_col) else 0   # which sub-column
+                row = i - per_col if block else i
+                ncol = block * 2                                 # name col 0 or 2
                 namelbl = tk.Label(frame, text=sig.name, bg=PANEL, fg=GREY, anchor="w",
                                    font=("Consolas", 9), cursor="hand2")
-                namelbl.grid(row=r, column=0, sticky="w", padx=(8, 6), pady=1)
+                namelbl.grid(row=row, column=ncol, sticky="w", padx=(8, 6), pady=1)
                 u = clean_unit(sig.unit)
-                val = tk.Label(frame, text="--" + (f" {u}" if u else ""), bg=PANEL,
-                               fg=FG, anchor="e", font=("Consolas", 9, "bold"),
-                               width=12, cursor="hand2")
-                val.grid(row=r, column=1, sticky="e", padx=(6, 8), pady=1)
-                frame.grid_columnconfigure(0, weight=1)   # name col absorbs slack
+                if "Post_Fault" in sig.name or "Run_Fault" in sig.name:
+                    # decoded inline to fault names (left-aligned, no width cap)
+                    self._faultword_keys.add(key)
+                    val = tk.Label(frame, text="--", bg=PANEL, fg=FG, anchor="w",
+                                   font=("Consolas", 9, "bold"), cursor="hand2")
+                    val.grid(row=row, column=ncol + 1, sticky="w", padx=(6, 8), pady=1)
+                else:
+                    val = tk.Label(frame, text="--" + (f" {u}" if u else ""), bg=PANEL,
+                                   fg=FG, anchor="e", font=("Consolas", 9, "bold"),
+                                   width=12, cursor="hand2")
+                    val.grid(row=row, column=ncol + 1, sticky="e", padx=(6, 8), pady=1)
                 self.value_labels[key] = (val, u)
                 # right-click a signal anywhere in the panels -> add to Watch / chart
                 for w in (namelbl, val):
                     w.bind("<Button-3>", lambda e, k=key: self._signal_context(e, k))
 
-        # Masonry layout: column count follows the window width (3 at the
-        # windowed default, more in fullscreen) and each panel keeps its own
-        # height, dropping into the shortest column — so a tall panel (e.g.
-        # MC_FAULTS) doesn't stretch its neighbours. Re-flows on resize.
+            frames.append(frame)
+            spans.append(2 if two_col else 1)
+
+        # Column-major layout: panels flow DOWN each column in CAN-ID order
+        # (ascending IDs read vertically), filling columns left-to-right and
+        # balancing height. Column count follows window width. Re-flows on resize.
         record = {"canvas": canvas, "inner": parent, "frames": frames,
-                  "ncols": 0, "w": 0}
+                  "spans": spans, "ncols": 0, "w": 0}
         self._panel_pages.append(record)
         canvas.bind("<Configure>", lambda e, rec=record: self._reflow_page(rec), add="+")
         self._reflow_page(record)
 
     def _reflow_page(self, record):
-        """Place a page's message panels in masonry columns (width //
-        PANEL_MIN_W of them). No-op when neither width nor column count changed."""
+        """Place a page's panels column-major (ascending CAN ID down each
+        column), into width // PANEL_MIN_W columns. No-op when nothing changed."""
         canvas = record["canvas"]
         w = canvas.winfo_width()
         if w <= 1:
@@ -1186,11 +1227,24 @@ class Dashboard(tk.Tk):
         inner = record["inner"]
         inner.update_idletasks()                # so reqheight() is accurate
         pad, col_w = 6, w // ncols
+        frames, spans = record["frames"], record["spans"]
+        heights = [f.winfo_reqheight() for f in frames]
+        total = sum(h * min(s, ncols) for h, s in zip(heights, spans))
+        target = total / ncols                  # aim for balanced column heights
         col_h = [pad] * ncols                   # running height of each column
-        for frame in record["frames"]:
-            c = min(range(ncols), key=lambda i: col_h[i])   # shortest column
-            frame.place(x=c * col_w + pad, y=col_h[c], width=col_w - 2 * pad)
-            col_h[c] += frame.winfo_reqheight() + pad
+        ci = 0                                   # column currently being filled
+        for frame, h, span in zip(frames, heights, spans):
+            if min(span, ncols) >= 2:            # double-width panel -> 2 columns
+                ci = min(ci, ncols - 2)
+                y = max(col_h[ci], col_h[ci + 1])
+                frame.place(x=ci * col_w + pad, y=y, width=2 * col_w - 2 * pad)
+                col_h[ci] = col_h[ci + 1] = y + h + pad
+            else:
+                ci = min(ci, ncols - 1)
+                frame.place(x=ci * col_w + pad, y=col_h[ci], width=col_w - 2 * pad)
+                col_h[ci] += h + pad
+            if col_h[ci] >= target and ci < ncols - 1:   # column full -> next
+                ci += 1
         inner.configure(height=max(col_h) + pad)   # so the canvas scrolls right
 
     def _reflow_all(self):
@@ -1998,11 +2052,27 @@ class Dashboard(tk.Tk):
             txt = f"{f:.2f}"
         return txt + (f" {unit}" if unit else "")
 
+    def _set_faultword_label(self, lbl, name, value):
+        """Render an inverter fault word as decoded names (red), or none (green)."""
+        try:
+            v = int(value)
+        except (TypeError, ValueError):
+            v = 0
+        if v == 0:
+            lbl.config(text="none", fg=GREEN)
+            return
+        names = decode_fault_word(name, v)
+        lbl.config(text=", ".join(names) if names else f"0x{v:04X}",
+                   fg=ACCENT if names else YELLOW)
+
     def _refresh_values(self):
         for name, (lbl, unit) in self.value_labels.items():
             if name not in self.values:
                 continue
             value = self.values[name]
+            if name in self._faultword_keys:
+                self._set_faultword_label(lbl, name, value)
+                continue
             lbl.config(text=self._fmt(value, unit))
             if is_fault_signal(name):
                 try:
@@ -2023,6 +2093,9 @@ class Dashboard(tk.Tk):
             if name not in self.values:
                 continue
             value = self.values[name]
+            if name in self._faultword_keys:
+                self._set_faultword_label(lbl, name, value)
+                continue
             lbl.config(text=self._fmt(value, unit))
             if is_fault_signal(name):
                 try:
@@ -2046,6 +2119,9 @@ class Dashboard(tk.Tk):
                     lbl.config(text=self._fmt(self._watch_param_cache[key], unit))
             elif key in self.values:
                 value = self.values[key]
+                if key in self._faultword_keys:
+                    self._set_faultword_label(lbl, key, value)
+                    continue
                 lbl.config(text=self._fmt(value, unit))
                 # match the bus/lookup tabs: fault signals red when set, green clear
                 if is_fault_signal(key):
