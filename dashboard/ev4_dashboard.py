@@ -375,54 +375,61 @@ class CanReader(threading.Thread):
             return
         self._can = can
 
-        opened, failed = [], []
+        # One worker per interface; each opens, receives, and re-opens on drop.
         for bus_index, ifname in self.channels:
-            try:
-                bus = can.Bus(channel=ifname, interface="socketcan")
-            except Exception as e:
-                # One bad/missing interface must NOT take down the others;
-                # warn and keep going with whatever opens (graceful degrade).
-                self.status_queue.put(("error", f"Could not open {ifname}: {e}"))
-                failed.append(ifname)
-                continue
-            self.buses[bus_index] = bus
-            opened.append(ifname)
-            threading.Thread(target=self._rx_loop, args=(bus_index, bus),
+            threading.Thread(target=self._bus_worker, args=(bus_index, ifname),
                              daemon=True).start()
 
-        if not self.buses:
-            self.status_queue.put(("error", "No CAN interfaces could be opened"))
-            return
-
-        label = " + ".join(opened) + (f"  (no {', '.join(failed)})" if failed else "")
-        self.status_queue.put(("connected", label))
+        names = " + ".join(n for _, n in self.channels)
+        self.status_queue.put(("connected", names))
         try:
             while not self._stop.is_set():
                 self._tick_heartbeat()
                 time.sleep(self.HEARTBEAT_MS / 1000.0)
         finally:
             self._close_all()
-            self.status_queue.put(("disconnected", " + ".join(opened)))
+            self.status_queue.put(("disconnected", names))
 
     def _close_all(self):
-        for b in self.buses.values():
+        for b in list(self.buses.values()):
             try:
                 b.shutdown()
             except Exception:
                 pass
         self.buses = {}
 
-    def _rx_loop(self, bus, can_bus):
-        """Blocking receive loop for one CAN interface."""
+    def _bus_worker(self, bus_index, ifname):
+        """Open a CAN interface, receive until it errors/drops, then re-open —
+        so a bus that goes down (bus-off, cable, reboot recovery) reconnects on
+        its own without restarting the dashboard. Other buses keep running."""
+        first = True
         while not self._stop.is_set():
             try:
-                msg = can_bus.recv(timeout=0.2)
+                bus = self._can.Bus(channel=ifname, interface="socketcan")
+            except Exception as e:
+                if first:        # report once; the bus-load %% shows it's at 0
+                    self.status_queue.put(("error", f"{ifname}: {e} (retrying)"))
+                    first = False
+                self._stop.wait(2.0)
+                continue
+            first = False
+            self.buses[bus_index] = bus
+            print(f"[can] {ifname} (bus {bus_index}) connected")
+            try:
+                while not self._stop.is_set():
+                    msg = bus.recv(timeout=0.2)
+                    if msg is not None:
+                        self._handle_frame(bus_index, msg)
             except Exception as e:
                 if not self._stop.is_set():
-                    self.status_queue.put(("error", f"recv error on bus {bus}: {e}"))
-                return
-            if msg is not None:
-                self._handle_frame(bus, msg)
+                    print(f"[can] {ifname} dropped: {e} — reconnecting")
+            finally:
+                self.buses.pop(bus_index, None)
+                try:
+                    bus.shutdown()
+                except Exception:
+                    pass
+            self._stop.wait(1.5)        # brief backoff before re-opening
 
     def _handle_frame(self, bus, msg):
         frame_id = msg.arbitration_id
@@ -1929,7 +1936,10 @@ class Dashboard(tk.Tk):
                 self.connect_btn.config(text="Connect", bg=GREEN, fg="#06210f")
             elif kind == "error":
                 self.status_lbl.config(text=payload, fg=ACCENT)
-                self.connect_btn.config(text="Connect", bg=GREEN, fg="#06210f")
+                # The reader auto-retries dropped buses, so only flip the button
+                # back to "Connect" when the whole reader has actually stopped.
+                if not (self.reader and self.reader.is_alive()):
+                    self.connect_btn.config(text="Connect", bg=GREEN, fg="#06210f")
 
         # drain decoded frames
         now = time.time()
