@@ -560,8 +560,25 @@ class Dashboard(tk.Tk):
         self.configure(bg=BG)
         self.geometry("1280x820")
         self._build_ui()
+        self._maximize()
 
         self.after(100, self._poll)
+
+    def _maximize(self):
+        """Open at full-screen size. Resizing/maximizing *after* the UI is
+        painted can leave static widgets (the Watch panel, the top-strip
+        labels/units) un-repainted over VNC/Wayland — only the live value
+        labels keep refreshing. Painting at full size from the start avoids
+        that broken resize-repaint. Falls back gracefully across WMs."""
+        for attempt in (lambda: self.state("zoomed"),
+                        lambda: self.attributes("-zoomed", True)):
+            try:
+                attempt()
+                return
+            except tk.TclError:
+                continue
+        self.update_idletasks()
+        self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
 
     # ---- UI construction -------------------------------------------------
     def _build_ui(self):
