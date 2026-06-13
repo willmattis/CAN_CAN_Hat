@@ -1214,8 +1214,11 @@ class Dashboard(tk.Tk):
         self._reflow_page(record)
 
     def _reflow_page(self, record):
-        """Place a page's panels column-major (ascending CAN ID down each
-        column), into width // PANEL_MIN_W columns. No-op when nothing changed."""
+        """Lay out a page's panels. Wide panels (e.g. MC_FAULTS) anchor at the
+        left columns with two short panels stacked on top of them, and the rest
+        flow column-major (ascending CAN ID down each column) across the
+        remaining columns — so only a wide panel needs scrolling and the far
+        column gets the trailing panels (e.g. IMD). Re-flows on resize."""
         canvas = record["canvas"]
         w = canvas.winfo_width()
         if w <= 1:
@@ -1228,23 +1231,51 @@ class Dashboard(tk.Tk):
         inner.update_idletasks()                # so reqheight() is accurate
         pad, col_w = 6, w // ncols
         frames, spans = record["frames"], record["spans"]
+        n = len(frames)
         heights = [f.winfo_reqheight() for f in frames]
-        total = sum(h * min(s, ncols) for h, s in zip(heights, spans))
-        target = total / ncols                  # aim for balanced column heights
-        col_h = [pad] * ncols                   # running height of each column
-        ci = 0                                   # column currently being filled
-        for frame, h, span in zip(frames, heights, spans):
-            if min(span, ncols) >= 2:            # double-width panel -> 2 columns
-                ci = min(ci, ncols - 2)
-                y = max(col_h[ci], col_h[ci + 1])
-                frame.place(x=ci * col_w + pad, y=y, width=2 * col_w - 2 * pad)
-                col_h[ci] = col_h[ci + 1] = y + h + pad
-            else:
-                ci = min(ci, ncols - 1)
-                frame.place(x=ci * col_w + pad, y=col_h[ci], width=col_w - 2 * pad)
-                col_h[ci] += h + pad
-            if col_h[ci] >= target and ci < ncols - 1:   # column full -> next
-                ci += 1
+        col_h = [pad] * ncols
+        placed = [False] * n
+
+        def place(i, c, wide):
+            cols = 2 if (wide and c <= ncols - 2) else 1
+            y = max(col_h[c:c + cols])
+            frames[i].place(x=c * col_w + pad, y=y, width=cols * col_w - 2 * pad)
+            for cc in range(c, c + cols):
+                col_h[cc] = y + heights[i] + pad
+            placed[i] = True
+
+        # Phase 1 (only when wide enough): each wide panel anchors at the left,
+        # with the next two short panels placed on top of its two columns.
+        smalls = [i for i in range(n) if spans[i] == 1]
+        si = left = 0
+        if ncols >= 4:
+            for i in range(n):
+                if spans[i] >= 2 and left <= ncols - 2:
+                    for cc in (left, left + 1):
+                        if si < len(smalls):
+                            place(smalls[si], cc, False)
+                            si += 1
+                    place(i, left, True)
+                    left += 2
+        normal_cols = list(range(left, ncols)) or list(range(ncols))
+
+        # Phase 2: remaining panels flow column-major across normal_cols.
+        rem = [i for i in range(n) if not placed[i]]
+        total = sum(heights[i] * (2 if spans[i] >= 2 else 1) for i in rem)
+        target = total / len(normal_cols) if normal_cols else total
+        k = 0
+        for i in rem:
+            wide = spans[i] >= 2 and ncols >= 2
+            c = normal_cols[min(k, len(normal_cols) - 1)]
+            if not wide and col_h[c] > pad and col_h[c] + heights[i] > target \
+                    and k < len(normal_cols) - 1:
+                k += 1
+                c = normal_cols[k]
+            if wide:
+                c = min(c, ncols - 2)
+            place(i, c, wide)
+            if col_h[c] >= target and k < len(normal_cols) - 1:
+                k += 1
         inner.configure(height=max(col_h) + pad)   # so the canvas scrolls right
 
     def _reflow_all(self):
