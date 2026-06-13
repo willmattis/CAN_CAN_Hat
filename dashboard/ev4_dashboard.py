@@ -303,20 +303,27 @@ class CanReader(threading.Thread):
             return
         self._can = can
 
-        opened = []
+        opened, failed = [], []
         for bus_index, ifname in self.channels:
             try:
                 bus = can.Bus(channel=ifname, interface="socketcan")
             except Exception as e:
+                # One bad/missing interface must NOT take down the others;
+                # warn and keep going with whatever opens (graceful degrade).
                 self.status_queue.put(("error", f"Could not open {ifname}: {e}"))
-                self._close_all()
-                return
+                failed.append(ifname)
+                continue
             self.buses[bus_index] = bus
             opened.append(ifname)
             threading.Thread(target=self._rx_loop, args=(bus_index, bus),
                              daemon=True).start()
 
-        self.status_queue.put(("connected", " + ".join(opened)))
+        if not self.buses:
+            self.status_queue.put(("error", "No CAN interfaces could be opened"))
+            return
+
+        label = " + ".join(opened) + (f"  (no {', '.join(failed)})" if failed else "")
+        self.status_queue.put(("connected", label))
         try:
             while not self._stop.is_set():
                 self._tick_heartbeat()
