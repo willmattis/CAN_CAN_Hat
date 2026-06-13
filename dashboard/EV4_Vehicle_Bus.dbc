@@ -48,59 +48,32 @@ BO_ 2 ECU_FAULTS: 8 Vector__XXX
  SG_ TORQUE_NOT_ZERO : 8|1@1+ (1,0) [0|0] "" Vector__XXX
  SG_ ECU_FAULT : 9|1@1+ (1,0) [0|0] "" Vector__XXX
 
-BO_ 3 MC_FAULTS: 8 Vector__XXX
- SG_ Fault32_MotorOvrSpd_INV1 : 0|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault33_OvrCurr_INV1 : 1|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault34_OvrVolt_INV1 : 2|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault35_InvOvrTemp_INV1 : 3|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault36_AccInputShorted_INV1 : 4|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault37_AccInputOpn_INV1 : 5|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault38_DirectionCommand_INV1 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault39_InvResponseTimeOut_INV1 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault40_HW_Gate_DeSat_INV1 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault41_HardwareOvrCurrent_INV1 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault42_UnderVolt_INV1 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault43_CANCmdMsgLost_INV1 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault44_MotorOvrTemp_INV1 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault48_BrakeInputShorted_INV1 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault49_BrakeInputOpn_INV1 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault50_ModuleA_OvrTemp_INV1 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault51_ModuleB_OvrTemp_INV1 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault52_ModuleC_OvrTemp_INV1 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault53_PCB_OvrTemp_INV1 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault54_GateDriveBoard1_Ovr_0002 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault55_GateDriveBoard2_Ovr_0003 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault56_GateDriveBoard3_Ovr_0004 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault57_CurrentSensor_INV1 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault59_HardwareDCBus_OvrVo_0006 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault62_Resolver_NotConn_INV1 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ ANY_MC_FAULT_INV1 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault32_MotorOvrSpd_INV2 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault33_OvrCurr_INV2 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault34_OvrVolt_INV2 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault35_InvOvrTemp_INV2 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault36_AccInputShorted_INV2 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault37_AccInputOpn_INV2 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault38_DirectionCommand_INV2 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault39_InvResponseTimeOut_INV2 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault40_HW_Gate_DeSat_INV2 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault41_HardwareOvrCurrent_INV2 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault42_UnderVolt_INV2 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault43_CANCmdMsgLost_INV2 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault44_MotorOvrTemp_INV2 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault48_BrakeInputShorted_INV2 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault49_BrakeInputOpn_INV2 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault50_ModuleA_OvrTemp_INV2 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault51_ModuleB_OvrTemp_INV2 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault52_ModuleC_OvrTemp_INV2 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault53_PCB_OvrTemp_INV2 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault54_GateDriveBoard1_Ovr_0001 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault55_GateDriveBoard2_Ovr_0007 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault56_GateDriveBoard3_Ovr_0000 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault57_CurrentSensor_INV2 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault59_HardwareDCBus_OvrVo_0005 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Fault62_Resolver_NotConn_INV2 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
- SG_ ANY_MC_FAULT_INV2 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+BO_ 3 MC_FAULTS_INV1: 8 Vector__XXX
+ SG_ Fault32_MotorOvrSpd_INV1 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault33_OvrCurr_INV1 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault34_OvrVolt_INV1 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault35_InvOvrTemp_INV1 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault36_AccInputShorted_INV1 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault37_AccInputOpn_INV1 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault38_DirectionCommand_INV1 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault39_InvResponseTimeOut_INV1 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault40_HW_Gate_DeSat_INV1 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault41_HardwareOvrCurrent_INV1 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault42_UnderVolt_INV1 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault43_CANCmdMsgLost_INV1 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault44_MotorOvrTemp_INV1 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault48_BrakeInputShorted_INV1 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault49_BrakeInputOpn_INV1 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault50_ModuleA_OvrTemp_INV1 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault51_ModuleB_OvrTemp_INV1 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault52_ModuleC_OvrTemp_INV1 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault53_PCB_OvrTemp_INV1 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault54_GateDriveBoard1_Ovr_0000 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault55_GateDriveBoard2_Ovr_0001 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault56_GateDriveBoard3_Ovr_0002 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault57_CurrentSensor_INV1 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault59_Hardware_DC_Bus_Ove_0003 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault62_Resolver_NotConn_INV1 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
 
 BO_ 4 APPS_Info: 8 Vector__XXX
  SG_ APPS0 : 0|16@1+ (1,0) [0|0] "" Vector__XXX
@@ -136,57 +109,83 @@ BO_ 7 BMS_Info: 8 Vector__XXX
  SG_ BMS_Pow_Lim : 48|8@1+ (1,0) [0|80] "kW" Vector__XXX
  SG_ BMS_Pack_Voltage : 56|8@1+ (1.254901961,280) [280|600] "V" Vector__XXX
 
-BO_ 2566849012 IMD_Info: 8 Vector__XXX
- SG_ IMD_R_iso : 0|16@1+ (1,0) [0|65535] "kOhm" Vector__XXX
- SG_ IMD_R_iso_Status : 16|8@1+ (1,0) [0|255] "" Vector__XXX
- SG_ IMD_Meas_Counter : 24|8@1+ (1,0) [0|255] "" Vector__XXX
- SG_ IMD_Device_Error : 32|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_HV_Pos_Conn_Fault : 33|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_HV_Neg_Conn_Fault : 34|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Earth_Conn_Fault : 35|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Iso_Alarm : 36|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Iso_Warning : 37|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Iso_Outdated : 38|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Unbalance_Alarm : 39|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Undervoltage_Alarm : 40|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Unsafe_To_Start : 41|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Earthlift_Open : 42|1@1+ (1,0) [0|1] "" Vector__XXX
- SG_ IMD_Device_Activity : 48|8@1+ (1,0) [0|2] "" Vector__XXX
- SG_ IMD_Byte7 : 56|8@1+ (1,0) [0|255] "" Vector__XXX
-
 BO_ 3221225472 VECTOR__INDEPENDENT_SIG_MSG: 0 Vector__XXX
  SG_ NewSignal_0001 : 0|8@1+ (1,0) [0|0] "" Vector__XXX
  SG_ Prog_Button_2 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
  SG_ Regen_Enabled : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ NewSignal_0002 : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ NewSignal_0003 : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault58_Reserved : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ANY_MC_FAULT_INV1 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ANY_MC_FAULT_INV2 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault62_Resolver_NotConn_INV2 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault59_HardwareDCBus_OvrVo_0004 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault57_CurrentSensor_INV2 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault56_GateDriveBoard3_Ovr_0005 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault55_GateDriveBoard2_Ovr_0006 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault54_GateDriveBoard1_Ovr_0007 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault53_PCB_OvrTemp_INV2 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault52_ModuleC_OvrTemp_INV2 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault51_ModuleB_OvrTemp_INV2 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault50_ModuleA_OvrTemp_INV2 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault49_BrakeInputOpn_INV2 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault48_BrakeInputShorted_INV2 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault44_MotorOvrTemp_INV2 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault43_CANCmdMsgLost_INV2 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault42_UnderVolt_INV2 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault41_HardwareOvrCurrent_INV2 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault40_HW_Gate_DeSat_INV2 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault39_InvResponseTimeOut_INV2 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault38_DirectionCommand_INV2 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault37_AccInputOpn_INV2 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault36_AccInputShorted_INV2 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault35_InvOvrTemp_INV2 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault34_OvrVolt_INV2 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault33_OvrCurr_INV2 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault32_MotorOvrSpd_INV2 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault62_Resolver_NotConn_INV1 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 8 MC_FAULT_INV2: 8 Vector__XXX
+ SG_ Fault32_MotorOvrSpd_INV2 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault33_OvrCurr_INV2 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault34_OvrVolt_INV2 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault35_InvOvrTemp_INV2 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault36_AccInputShorted_INV2 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault37_AccInputOpn_INV2 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault38_DirectionCommand_INV2 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault39_InvResponseTimeOut_INV2 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault40_HW_Gate_DeSat_INV2 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault41_HardwareOvrCurrent_INV2 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault42_UnderVolt_INV2 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault43_CANCmdMsgLost_INV2 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault44_MotorOvrTemp_INV2 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault48_BrakeInputShorted_INV2 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault49_BrakeInputOpn_INV2 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault50_ModuleA_OvrTemp_INV2 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault51_ModuleB_OvrTemp_INV2 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault52_ModuleC_OvrTemp_INV2 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault53_PCB_OvrTemp_INV2 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault54_GateDriveBoard1_Ovr_0008 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault55_GateDriveBoard2_Ovr_0009 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault56_GateDriveBoard3_Ovr_0010 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault57_CurrentSensor_INV2 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault59_Hardware_DC_Bus_Ove_0011 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ Fault62_Resolver_NotConn_INV2 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
 
 
 
 BA_DEF_ SG_  "SystemSignalLongSymbol" STRING ;
 BA_DEF_DEF_  "SystemSignalLongSymbol" "";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault54_GateDriveBoard1_Ovr_0002 "Fault54_GateDriveBoard1_OvrTemp_INV1";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault55_GateDriveBoard2_Ovr_0003 "Fault55_GateDriveBoard2_OvrTemp_INV1";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault56_GateDriveBoard3_Ovr_0004 "Fault56_GateDriveBoard3_OvrTemp_INV1";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault59_HardwareDCBus_OvrVo_0006 "Fault59_HardwareDCBus_OvrVolt_INV1";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault54_GateDriveBoard1_Ovr_0001 "Fault54_GateDriveBoard1_OvrTemp_INV2";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault55_GateDriveBoard2_Ovr_0007 "Fault55_GateDriveBoard2_OvrTemp_INV2";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault56_GateDriveBoard3_Ovr_0000 "Fault56_GateDriveBoard3_OvrTemp_INV2";
-BA_ "SystemSignalLongSymbol" SG_ 3 Fault59_HardwareDCBus_OvrVo_0005 "Fault59_HardwareDCBus_OvrVolt_INV2";
-CM_ BO_ 2566849012 "Bender iso175 IMD_Info_General (device reconfigured to this CAN ID), 100 ms cyclic.";
-CM_ SG_ 2566849012 IMD_R_iso "Insulation resistance R_iso_corrected (neg. tolerance shifted), kOhm. 0..40500 valid; 65535 = signal not valid.";
-CM_ SG_ 2566849012 IMD_R_iso_Status "Measurement status of R_iso (see value table). 254 = normal operation.";
-CM_ SG_ 2566849012 IMD_Meas_Counter "Increments on each new isolation measurement.";
-CM_ SG_ 2566849012 IMD_Device_Activity "Device state: 0 init, 1 normal operation, 2 self test.";
-VAL_ 2566849012 IMD_R_iso_Status 252 "startup estimate" 253 "first measured (startup)" 254 "normal operation" 255 "invalid (SNV)" ;
-VAL_ 2566849012 IMD_Device_Activity 0 "initialization" 1 "normal operation" 2 "self test" ;
-VAL_ 2566849012 IMD_Device_Error 0 "ok" 1 "device error active" ;
-VAL_ 2566849012 IMD_HV_Pos_Conn_Fault 0 "ok" 1 "HV+ connection failure" ;
-VAL_ 2566849012 IMD_HV_Neg_Conn_Fault 0 "ok" 1 "HV- connection failure" ;
-VAL_ 2566849012 IMD_Earth_Conn_Fault 0 "ok" 1 "earth connection failure" ;
-VAL_ 2566849012 IMD_Iso_Alarm 0 "ok" 1 "isolation below error threshold" ;
-VAL_ 2566849012 IMD_Iso_Warning 0 "ok" 1 "isolation below warning threshold" ;
-VAL_ 2566849012 IMD_Iso_Outdated 0 "ok" 1 "measurement outdated (timeout)" ;
-VAL_ 2566849012 IMD_Unbalance_Alarm 0 "ok" 1 "unbalance below threshold" ;
-VAL_ 2566849012 IMD_Undervoltage_Alarm 0 "ok" 1 "undervoltage alarm" ;
-VAL_ 2566849012 IMD_Unsafe_To_Start 0 "ok" 1 "unsafe to start" ;
-VAL_ 2566849012 IMD_Earthlift_Open 0 "closed" 1 "earthlift open" ;
+BA_ "SystemSignalLongSymbol" SG_ 3 Fault54_GateDriveBoard1_Ovr_0000 "Fault54_GateDriveBoard1_OvrTemp_INV1";
+BA_ "SystemSignalLongSymbol" SG_ 3 Fault55_GateDriveBoard2_Ovr_0001 "Fault55_GateDriveBoard2_OvrTemp_INV1";
+BA_ "SystemSignalLongSymbol" SG_ 3 Fault56_GateDriveBoard3_Ovr_0002 "Fault56_GateDriveBoard3_OvrTemp_INV1";
+BA_ "SystemSignalLongSymbol" SG_ 3 Fault59_Hardware_DC_Bus_Ove_0003 "Fault59_Hardware_DC_Bus_Over_Voltage";
+BA_ "SystemSignalLongSymbol" SG_ 3221225472 Fault59_HardwareDCBus_OvrVo_0004 "Fault59_HardwareDCBus_OvrVolt_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 3221225472 Fault56_GateDriveBoard3_Ovr_0005 "Fault56_GateDriveBoard3_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 3221225472 Fault55_GateDriveBoard2_Ovr_0006 "Fault55_GateDriveBoard2_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 3221225472 Fault54_GateDriveBoard1_Ovr_0007 "Fault54_GateDriveBoard1_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 8 Fault54_GateDriveBoard1_Ovr_0008 "Fault54_GateDriveBoard1_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 8 Fault55_GateDriveBoard2_Ovr_0009 "Fault55_GateDriveBoard2_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 8 Fault56_GateDriveBoard3_Ovr_0010 "Fault56_GateDriveBoard3_OvrTemp_INV2";
+BA_ "SystemSignalLongSymbol" SG_ 8 Fault59_Hardware_DC_Bus_Ove_0011 "Fault59_Hardware_DC_Bus_Over_Voltage_INV2";
 
