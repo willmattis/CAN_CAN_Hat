@@ -161,7 +161,8 @@ CYAN     = "#36c5d6"
 
 def is_fault_signal(name: str) -> bool:
     n = name.lower()
-    return "fault" in n or n.endswith("_fault") or "critical" in n
+    return ("fault" in n or n.endswith("_fault") or "critical" in n
+            or "alarm" in n)   # IMD iso/unbalance/undervoltage alarms
 
 
 # ── Cascadia Motion (PM100) inverter write helpers ───────────────────

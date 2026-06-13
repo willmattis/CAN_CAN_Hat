@@ -287,15 +287,31 @@ keeps its plain names. Frame IDs don't overlap between the three files.
 To add another bus, drop the `.dbc` next to the script and add a
 `("file.dbc", "PREFIX")` line to `DBC_SOURCES`.
 
-### IMD (Bender iso165C)
+### IMD (Bender iso175)
 
-The vehicle-bus DBC includes the IMD message at the **29-bit extended** ID
-`0x18FF01F4` (`IMD_Info`). `IMD_R_iso` (bytes 0–1, uint16, **kΩ**) is the
-insulation resistance — that scaling is from the documented iso165C protocol.
-Bytes 2–7 are added as raw `IMD_Status_Byte2..7` placeholders; replace them with
-real status/flag signals once verified against your iso165C manual.
-Extended (29-bit) IDs are handled automatically — SocketCAN flags them on the
-frame and the dashboard decodes them the same as standard IDs.
+The vehicle-bus DBC fully decodes the iso175's `IMD_Info_General` message, which
+this device is configured to send at the **29-bit extended** ID `0x18FF01F4`
+(`IMD_Info`, 100 ms cyclic). Decoded per the iso175 CAN spec
+(`Documents/iso175_CAN_D00415_N_XXEN.pdf`):
+
+| Signal | Bytes | Meaning |
+|--------|-------|---------|
+| `IMD_R_iso` | 0–1 | Insulation resistance R_iso_corrected, **kΩ** (0–40500; 65535 = invalid) |
+| `IMD_R_iso_Status` | 2 | Measurement status (254 = normal operation; 252/253 = startup; 255 = invalid) |
+| `IMD_Meas_Counter` | 3 | Increments each new measurement |
+| `IMD_Device_Error` … `IMD_Earthlift_Open` | 4–5 | 11 warning/alarm bits: device error, HV± / earth connection failure, iso alarm/warning, iso outdated, unbalance alarm, undervoltage alarm, unsafe-to-start, earthlift open |
+| `IMD_Device_Activity` | 6 | 0 init / 1 normal operation / 2 self test |
+
+The connection-failure and alarm bits color **red** when set (like other fault
+signals). Status/activity enums carry value tables (visible in the 🔍 Lookup
+tab). Extended (29-bit) IDs are handled automatically — SocketCAN flags them on
+the frame and the dashboard decodes them the same as standard IDs.
+
+> The device's other iso175 messages (`IMD_Info_IsolationDetail` 0x38,
+> `IMD_Info_Voltage` 0x39 — HV bus & HV±-to-earth voltages, `IMD_Info_IT-System`
+> 0x3A) are **deactivated by default**. Enable them on the iso175 (CAN `Set`
+> command, index 0x78) and add matching `BO_`/`SG_` entries to the DBC if you
+> want HV voltage / per-rail resistance on the dashboard.
 
 ## Keeping it in sync with the bus
 
