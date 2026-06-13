@@ -174,6 +174,45 @@ PARAM_GAMMA_ADJUST_EEP     = 152   # save Gamma Adjust to EEPROM, degrees x10
 PARAM_INVERTER_RUN_MODE    = 142   # EEPROM: 0=Torque, 1=Speed (immediate)
 PARAM_INVERTER_CMD_MODE    = 143   # EEPROM: 0=CAN, 1=VSM (needs power-cycle)
 
+# Fault bit -> name tables for the 0x0AB Fault Codes message (CAN Protocol v5.9
+# §2.1, pp. 27-28). Bit index is within the 32-bit word formed as (Hi<<16)|Lo,
+# i.e. Lo = bits 0-15, Hi = bits 16-31. Reserved bits are omitted.
+POST_FAULTS = {
+    0: "HW Gate/Desaturation", 1: "HW Over-current", 2: "Accelerator Shorted",
+    3: "Accelerator Open", 4: "Current Sensor Low", 5: "Current Sensor High",
+    6: "Module Temp Low", 7: "Module Temp High", 8: "Control PCB Temp Low",
+    9: "Control PCB Temp High", 10: "Gate Drive PCB Temp Low",
+    11: "Gate Drive PCB Temp High", 12: "5V Sense Low", 13: "5V Sense High",
+    14: "12V Sense Low", 15: "12V Sense High", 16: "2.5V Sense Low",
+    17: "2.5V Sense High", 18: "1.5V Sense Low", 19: "1.5V Sense High",
+    20: "DC Bus Voltage High", 21: "DC Bus Voltage Low", 22: "Pre-charge Timeout",
+    23: "Pre-charge Voltage Fail", 24: "EEPROM Checksum Invalid",
+    25: "EEPROM Data Out of Range", 26: "EEPROM Update Required",
+    27: "HW DC Bus Over-Voltage (init)", 28: "Gate Driver Init (Gen5)",
+    30: "Brake Shorted", 31: "Brake Open",
+}
+RUN_FAULTS = {
+    0: "Motor Over-speed", 1: "Over-current", 2: "Over-voltage",
+    3: "Inverter Over-temp", 4: "Accelerator Input Shorted",
+    5: "Accelerator Input Open", 6: "Direction Command",
+    7: "Inverter Response Timeout", 8: "HW Gate/Desaturation",
+    9: "HW Over-current", 10: "Under-voltage", 11: "CAN Command Message Lost",
+    12: "Motor Over-temp", 16: "Brake Input Shorted", 17: "Brake Input Open",
+    18: "Module A Over-temp", 19: "Module B Over-temp", 20: "Module C Over-temp",
+    21: "PCB Over-temp", 22: "Gate Drive Board 1 Over-temp",
+    23: "Gate Drive Board 2 Over-temp", 24: "Gate Drive Board 3 Over-temp",
+    25: "Current Sensor", 26: "Gate Driver Over-Voltage (Gen5)",
+    27: "HW DC Bus Over-Voltage (Gen3)", 28: "HW DC Bus Over-Voltage (Gen5)",
+    30: "Resolver Not Connected",
+}
+
+
+def decode_faults(table, lo, hi):
+    """Return (bits, [active fault names]) for a Lo/Hi fault word pair."""
+    bits = (int(hi or 0) << 16) | int(lo or 0)
+    names = [name for bit, name in table.items() if bits & (1 << bit)]
+    return bits, names
+
 
 def _clamp_s16(v):
     return max(-32768, min(32767, int(v)))
@@ -1374,7 +1413,7 @@ class Dashboard(tk.Tk):
         self.ctl_state = {}
         rows = [("Command mode", "cmd_mode"), ("Run mode", "run_mode"),
                 ("Enable state", "enable"), ("Lockout", "lockout"),
-                ("Inverter state", "state"), ("Run faults", "faults")]
+                ("Inverter state", "state")]
         for i, (label, kk) in enumerate(rows):
             tk.Label(st, text=label, bg=PANEL, fg=GREY, anchor="w",
                      font=("Consolas", 9)).grid(row=i // 2, column=(i % 2) * 2,
@@ -1383,6 +1422,18 @@ class Dashboard(tk.Tk):
                          font=("Consolas", 9, "bold"), width=18)
             v.grid(row=i // 2, column=(i % 2) * 2 + 1, sticky="w", padx=(0, 10), pady=2)
             self.ctl_state[kk] = v
+
+        # Decoded fault lines (active fault names, wrapping across the panel).
+        frow = (len(rows) + 1) // 2
+        for label, kk in (("POST faults", "post_faults"), ("Run faults", "run_faults")):
+            tk.Label(st, text=label, bg=PANEL, fg=GREY, anchor="nw",
+                     font=("Consolas", 9)).grid(row=frow, column=0, sticky="nw",
+                                                padx=(8, 4), pady=2)
+            v = tk.Label(st, text="--", bg=PANEL, fg=FG, anchor="w", justify="left",
+                         font=("Consolas", 9, "bold"), wraplength=620)
+            v.grid(row=frow, column=1, columnspan=3, sticky="w", padx=(0, 10), pady=2)
+            self.ctl_state[kk] = v
+            frow += 1
 
         outer.grid_columnconfigure(0, weight=1)
         outer.grid_columnconfigure(1, weight=1)
@@ -1512,15 +1563,26 @@ class Dashboard(tk.Tk):
         sv = g("INV_Inverter_State")
         self.ctl_state["state"].config(text="--" if sv is None else f"{int(sv)}", fg=FG)
 
-        rfl, rfh = g("INV_Run_Fault_Lo"), g("INV_Run_Fault_Hi")
-        if rfl is None and rfh is None:
-            self.ctl_state["faults"].config(text="--", fg=GREY)
+        self._set_fault_line("post_faults", POST_FAULTS,
+                             g("INV_Post_Fault_Lo"), g("INV_Post_Fault_Hi"))
+        self._set_fault_line("run_faults", RUN_FAULTS,
+                             g("INV_Run_Fault_Lo"), g("INV_Run_Fault_Hi"))
+
+    def _set_fault_line(self, key, table, lo, hi):
+        """Show the active fault names (decoded) for a Lo/Hi fault word pair."""
+        lbl = self.ctl_state.get(key)
+        if lbl is None:
+            return
+        if lo is None and hi is None:
+            lbl.config(text="-- (no data)", fg=GREY)
+            return
+        bits, names = decode_faults(table, lo, hi)
+        if not bits:
+            lbl.config(text="none", fg=GREEN)
+        elif names:
+            lbl.config(text=f"0x{bits:08X}  " + ", ".join(names), fg=ACCENT)
         else:
-            lo16, hi16 = int(rfl or 0), int(rfh or 0)
-            if lo16 or hi16:
-                self.ctl_state["faults"].config(text=f"0x{hi16:04X}{lo16:04X}", fg=ACCENT)
-            else:
-                self.ctl_state["faults"].config(text="none", fg=GREEN)
+            lbl.config(text=f"0x{bits:08X}  (reserved bits)", fg=YELLOW)
 
     # ---- parameter helpers ----
     def _fill_param(self, addr):
