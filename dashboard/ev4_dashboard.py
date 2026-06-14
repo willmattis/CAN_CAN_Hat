@@ -61,6 +61,9 @@ PANEL_MIN_W = 320          # min px per message panel; tab columns = width // th
                            # (gives 3 cols at the 1280 windowed default, more wide)
 WIDE_PANEL_SIGNALS = 40    # panels with >= this many signals use 2 internal
                            # columns and span 2 layout columns (e.g. MC_FAULTS)
+UI_REFRESH_S = 0.3         # how often the *visible* labels redraw (data is still
+                           # ingested at 10 Hz). Keeps a VNC/remote link from
+                           # being flooded by a fast-repainting screen.
 
 # DBC sources, decoded together.  Each (filename, prefix); the prefix keeps
 # signals/messages unique when two buses reuse the same names (the two
@@ -614,6 +617,7 @@ class Dashboard(tk.Tk):
         self.unknown_count = 0
         self._fps_window = []     # timestamps for frames/sec
         self._load_window = []    # (timestamp, frame_bits) for bus-load estimate
+        self._last_ui_refresh = 0.0  # throttles visible label redraws (VNC-friendly)
 
         self.value_labels = {}    # signal_name -> tk Label
         self.key_labels = {}      # signal_name -> tk Label
@@ -1972,34 +1976,39 @@ class Dashboard(tk.Tk):
             if self.csv_writer is not None:
                 self._write_log_row(now, msg_name)
 
-        if got:
-            self._refresh_values()
-
-        # frames/sec + estimated per-bus load over a 1s sliding window
+        # Keep the sliding windows bounded every cycle (cheap bookkeeping).
         self._fps_window = [t for t in self._fps_window if now - t <= 1.0]
         self._load_window = [(t, b, k) for (t, b, k) in self._load_window if now - t <= 1.0]
-        per_bus = {}
-        for _t, b, k in self._load_window:
-            per_bus[k] = per_bus.get(k, 0) + b
-        worst = 0.0
-        parts = []
-        for k in self.buses:
-            ld = min(100.0, per_bus.get(k, 0) / self.bitrate * 100)
-            worst = max(worst, ld)
-            parts.append(f"b{k} {ld:.0f}%")
-        load_color = GREEN if worst < 50 else (YELLOW if worst < 80 else ACCENT)
-        self.fps_lbl.config(
-            text=f"{len(self._fps_window)} fps  |  {'  '.join(parts)}  |  unk {self.unknown_count}",
-            fg=load_color)
-        if self.csv_writer is not None:
-            self.log_lbl.config(text=f"{os.path.basename(self.log_path)}  ({self.log_rows} rows)",
-                                fg=GREEN)
 
-        self._mark_stale(now)
-        self._service_heartbeat()
+        # Throttle the *visible* redraws to a few Hz. Frames are drained and
+        # values updated at 10 Hz above, but repainting every label that fast
+        # floods a remote-desktop (VNC) link and stalls the connection; the
+        # screen only needs to refresh a few times a second to read fine.
+        if now - self._last_ui_refresh >= UI_REFRESH_S:
+            self._last_ui_refresh = now
+            self._refresh_values()
+            per_bus = {}
+            for _t, b, k in self._load_window:
+                per_bus[k] = per_bus.get(k, 0) + b
+            worst = 0.0
+            parts = []
+            for k in self.buses:
+                ld = min(100.0, per_bus.get(k, 0) / self.bitrate * 100)
+                worst = max(worst, ld)
+                parts.append(f"b{k} {ld:.0f}%")
+            load_color = GREEN if worst < 50 else (YELLOW if worst < 80 else ACCENT)
+            self.fps_lbl.config(
+                text=f"{len(self._fps_window)} fps  |  {'  '.join(parts)}  |  unk {self.unknown_count}",
+                fg=load_color)
+            if self.csv_writer is not None:
+                self.log_lbl.config(text=f"{os.path.basename(self.log_path)}  ({self.log_rows} rows)",
+                                    fg=GREEN)
+            self._mark_stale(now)
+            if self.charts:
+                self._update_charts()
+
+        self._service_heartbeat()        # stays at 10 Hz (deadman safety)
         self._service_watch_params(now)
-        if self.charts:
-            self._update_charts()
         self.after(100, self._poll)
 
     def _service_watch_params(self, now):
