@@ -65,6 +65,18 @@ UI_REFRESH_S = 0.3         # how often the *visible* labels redraw (data is stil
                            # ingested at 10 Hz). Keeps a VNC/remote link from
                            # being flooded by a fast-repainting screen.
 
+# Preferred placement order of panels on a page, by message name. Lets related
+# panels sit together regardless of CAN ID (e.g. the two motor-controller fault
+# tables side by side); anything not listed falls back to CAN-ID order after
+# these. Only the Vehicle page is affected — inverter message names aren't
+# listed, so those pages stay in CAN-ID order. Edit freely to taste.
+PANEL_ORDER = [
+    "ECU_FAULTS",
+    "MC_FAULTS_INV1", "MC_FAULT_INV2",   # the two MC fault tables -> adjacent
+    "APPS_Info", "Sensors_Info", "Internal_States", "BMS_Info",
+    "IMD_Info",
+]
+
 # DBC sources, decoded together.  Each (filename, prefix); the prefix keeps
 # signals/messages unique when two buses reuse the same names (the two
 # inverters share every message + signal name, only their CAN IDs differ).
@@ -1166,6 +1178,10 @@ class Dashboard(tk.Tk):
     SRC_COLOR = {"": CYAN, "INV1": "#7ee081", "INV2": "#e0c97e"}
 
     def _build_message_panels(self, parent, msgs, canvas):
+        # Place panels in PANEL_ORDER first (related panels together), then any
+        # others by CAN ID. Layout (below) follows this order.
+        rank = {name: i for i, name in enumerate(PANEL_ORDER)}
+        msgs = sorted(msgs, key=lambda pm: (rank.get(pm[1].name, len(rank)), pm[1].frame_id))
         frames, spans = [], []
         for prefix, msg in msgs:
             tag = f"{prefix}  " if prefix else ""
@@ -1215,9 +1231,10 @@ class Dashboard(tk.Tk):
             frames.append(frame)
             spans.append(2 if two_col else 1)
 
-        # Column-major layout: panels flow DOWN each column in CAN-ID order
-        # (ascending IDs read vertically), filling columns left-to-right and
-        # balancing height. Column count follows window width. Re-flows on resize.
+        # Masonry layout: each panel drops into the shortest column so columns
+        # stay balanced and trailing panels fill gaps. Panels are processed in
+        # PANEL_ORDER (above), so related ones (the two MC fault tables) sit in
+        # adjacent columns. Re-flows on resize.
         record = {"canvas": canvas, "inner": parent, "frames": frames,
                   "spans": spans, "ncols": 0, "w": 0}
         self._panel_pages.append(record)
@@ -1225,11 +1242,9 @@ class Dashboard(tk.Tk):
         self._reflow_page(record)
 
     def _reflow_page(self, record):
-        """Lay out a page's panels. Wide panels (e.g. MC_FAULTS) anchor at the
-        left columns with two short panels stacked on top of them, and the rest
-        flow column-major (ascending CAN ID down each column) across the
-        remaining columns — so only a wide panel needs scrolling and the far
-        column gets the trailing panels (e.g. IMD). Re-flows on resize."""
+        """Masonry: place each panel in the shortest column (a wide panel in the
+        shortest adjacent pair), in PANEL_ORDER. Balances column heights and
+        fills gaps, so trailing panels (e.g. IMD) land in the emptiest column."""
         canvas = record["canvas"]
         w = canvas.winfo_width()
         if w <= 1:
@@ -1242,51 +1257,19 @@ class Dashboard(tk.Tk):
         inner.update_idletasks()                # so reqheight() is accurate
         pad, col_w = 6, w // ncols
         frames, spans = record["frames"], record["spans"]
-        n = len(frames)
         heights = [f.winfo_reqheight() for f in frames]
         col_h = [pad] * ncols
-        placed = [False] * n
-
-        def place(i, c, wide):
-            cols = 2 if (wide and c <= ncols - 2) else 1
+        for i, frame in enumerate(frames):
+            if spans[i] >= 2 and ncols >= 2:    # wide -> shortest adjacent pair
+                c = min(range(ncols - 1), key=lambda x: max(col_h[x], col_h[x + 1]))
+                cols = 2
+            else:                               # normal -> shortest column
+                c = min(range(ncols), key=lambda x: col_h[x])
+                cols = 1
             y = max(col_h[c:c + cols])
-            frames[i].place(x=c * col_w + pad, y=y, width=cols * col_w - 2 * pad)
+            frame.place(x=c * col_w + pad, y=y, width=cols * col_w - 2 * pad)
             for cc in range(c, c + cols):
                 col_h[cc] = y + heights[i] + pad
-            placed[i] = True
-
-        # Phase 1 (only when wide enough): each wide panel anchors at the left,
-        # with the next two short panels placed on top of its two columns.
-        smalls = [i for i in range(n) if spans[i] == 1]
-        si = left = 0
-        if ncols >= 4:
-            for i in range(n):
-                if spans[i] >= 2 and left <= ncols - 2:
-                    for cc in (left, left + 1):
-                        if si < len(smalls):
-                            place(smalls[si], cc, False)
-                            si += 1
-                    place(i, left, True)
-                    left += 2
-        normal_cols = list(range(left, ncols)) or list(range(ncols))
-
-        # Phase 2: remaining panels flow column-major across normal_cols.
-        rem = [i for i in range(n) if not placed[i]]
-        total = sum(heights[i] * (2 if spans[i] >= 2 else 1) for i in rem)
-        target = total / len(normal_cols) if normal_cols else total
-        k = 0
-        for i in rem:
-            wide = spans[i] >= 2 and ncols >= 2
-            c = normal_cols[min(k, len(normal_cols) - 1)]
-            if not wide and col_h[c] > pad and col_h[c] + heights[i] > target \
-                    and k < len(normal_cols) - 1:
-                k += 1
-                c = normal_cols[k]
-            if wide:
-                c = min(c, ncols - 2)
-            place(i, c, wide)
-            if col_h[c] >= target and k < len(normal_cols) - 1:
-                k += 1
         inner.configure(height=max(col_h) + pad)   # so the canvas scrolls right
 
     def _reflow_all(self):
