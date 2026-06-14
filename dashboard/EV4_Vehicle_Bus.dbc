@@ -172,7 +172,23 @@ BO_ 8 MC_FAULT_INV2: 8 Vector__XXX
  SG_ Fault59_Hardware_DC_Bus_Ove_0011 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
  SG_ Fault62_Resolver_NotConn_INV2 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
 
-
+BO_ 2566849012 IMD_Info: 8 Vector__XXX
+ SG_ IMD_R_iso : 0|16@1+ (1,0) [0|65535] "kOhm" Vector__XXX
+ SG_ IMD_R_iso_Status : 16|8@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ IMD_Meas_Counter : 24|8@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ IMD_Device_Error : 32|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_HV_Pos_Conn_Fault : 33|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_HV_Neg_Conn_Fault : 34|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Earth_Conn_Fault : 35|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Iso_Alarm : 36|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Iso_Warning : 37|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Iso_Outdated : 38|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Unbalance_Alarm : 39|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Undervoltage_Alarm : 40|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Unsafe_To_Start : 41|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Earthlift_Open : 42|1@1+ (1,0) [0|1] "" Vector__XXX
+ SG_ IMD_Device_Activity : 48|8@1+ (1,0) [0|2] "" Vector__XXX
+ SG_ IMD_Byte7 : 56|8@1+ (1,0) [0|255] "" Vector__XXX
 
 BA_DEF_ SG_  "SystemSignalLongSymbol" STRING ;
 BA_DEF_DEF_  "SystemSignalLongSymbol" "";
@@ -188,4 +204,22 @@ BA_ "SystemSignalLongSymbol" SG_ 8 Fault54_GateDriveBoard1_Ovr_0008 "Fault54_Gat
 BA_ "SystemSignalLongSymbol" SG_ 8 Fault55_GateDriveBoard2_Ovr_0009 "Fault55_GateDriveBoard2_OvrTemp_INV2";
 BA_ "SystemSignalLongSymbol" SG_ 8 Fault56_GateDriveBoard3_Ovr_0010 "Fault56_GateDriveBoard3_OvrTemp_INV2";
 BA_ "SystemSignalLongSymbol" SG_ 8 Fault59_Hardware_DC_Bus_Ove_0011 "Fault59_Hardware_DC_Bus_Over_Voltage_INV2";
+CM_ BO_ 2566849012 "Bender iso175 IMD_Info_General (device reconfigured to this CAN ID), 100 ms cyclic.";
+CM_ SG_ 2566849012 IMD_R_iso "Insulation resistance R_iso_corrected (neg. tolerance shifted), kOhm. 0..40500 valid; 65535 = signal not valid.";
+CM_ SG_ 2566849012 IMD_R_iso_Status "Measurement status of R_iso (see value table). 254 = normal operation.";
+CM_ SG_ 2566849012 IMD_Meas_Counter "Increments on each new isolation measurement.";
+CM_ SG_ 2566849012 IMD_Device_Activity "Device state: 0 init, 1 normal operation, 2 self test.";
+VAL_ 2566849012 IMD_R_iso_Status 252 "startup estimate" 253 "first measured (startup)" 254 "normal operation" 255 "invalid (SNV)" ;
+VAL_ 2566849012 IMD_Device_Activity 0 "initialization" 1 "normal operation" 2 "self test" ;
+VAL_ 2566849012 IMD_Device_Error 0 "ok" 1 "device error active" ;
+VAL_ 2566849012 IMD_HV_Pos_Conn_Fault 0 "ok" 1 "HV+ connection failure" ;
+VAL_ 2566849012 IMD_HV_Neg_Conn_Fault 0 "ok" 1 "HV- connection failure" ;
+VAL_ 2566849012 IMD_Earth_Conn_Fault 0 "ok" 1 "earth connection failure" ;
+VAL_ 2566849012 IMD_Iso_Alarm 0 "ok" 1 "isolation below error threshold" ;
+VAL_ 2566849012 IMD_Iso_Warning 0 "ok" 1 "isolation below warning threshold" ;
+VAL_ 2566849012 IMD_Iso_Outdated 0 "ok" 1 "measurement outdated (timeout)" ;
+VAL_ 2566849012 IMD_Unbalance_Alarm 0 "ok" 1 "unbalance below threshold" ;
+VAL_ 2566849012 IMD_Undervoltage_Alarm 0 "ok" 1 "undervoltage alarm" ;
+VAL_ 2566849012 IMD_Unsafe_To_Start 0 "ok" 1 "unsafe to start" ;
+VAL_ 2566849012 IMD_Earthlift_Open 0 "closed" 1 "earthlift open" ;
 
